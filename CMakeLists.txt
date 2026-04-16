@@ -79,6 +79,7 @@ add_executable(canbus-sender
     src/config.cpp
     src/dhcp.cpp
     src/proto_io.cpp
+    src/can_probe.cpp
     src/bridge.cpp
     "${PROTO_C_SRC}"
 )

@@ -6,13 +6,32 @@ enum DeviceType {
   DEVICE_CANBUS  = 1;
 }
 
+// Physical state of a CAN port discovered on the device at announce time.
+message CanPortInfo {
+  string port_id     = 1;  // "can0", "can1", …
+  uint32 bitrate     = 2;  // currently configured bitrate (0 = not set / interface down)
+  bool   fd_capable  = 3;  // hardware supports CAN FD
+  bool   link_active = 4;  // interface is administratively up and link appears active
+}
+
 message DeviceAnnounce {
-  uint32          protocol_version = 1;
-  DeviceType      type             = 2;
-  string          firmware_version = 3;
-  string          device_id        = 4;  // MAC address
-  repeated uint32 udp_ports        = 5;  // ports device intends to send on
-  string          config_hash      = 6;  // SHA-256 hex of current config file
+  uint32               protocol_version = 1;
+  DeviceType           type             = 2;
+  string               firmware_version = 3;
+  string               device_id        = 4;  // MAC address
+  repeated uint32      udp_ports        = 5;  // UDP ports currently in use (from stored config)
+  string               config_hash      = 6;  // SHA-256 of stored port assignments; empty on virgin device
+  repeated CanPortInfo can_ports        = 7;  // all physical CAN ports discovered on this device
+}
+
+// Per-port assignment sent by the HU in DeviceAck.
+message CanPortAssignment {
+  string port_id      = 1;  // "can0"
+  string bus_name     = 2;  // "powertrain"
+  string description  = 3;  // "High speed — engine, gearbox, ABS"
+  uint32 bitrate      = 4;  // configure this port at this bitrate
+  uint32 udp_port     = 5;  // broadcast frames from this port to this UDP destination port
+  bool   enabled      = 6;  // false = HU has disabled this port entirely
 }
 
 message DeviceAck {
@@ -21,10 +40,11 @@ message DeviceAck {
     REJECTED         = 1;
     UPDATE_REQUIRED  = 2;
   }
-  Status status       = 1;
-  string firmware_url = 2;
-  string config_url   = 3;
-  uint32 assigned_id  = 4;
+  Status                    status       = 1;
+  string                    firmware_url = 2;
+  string                    config_url   = 3;
+  uint32                    assigned_id  = 4;
+  repeated CanPortAssignment can_ports   = 5;  // full port assignment for this device
 }
 
 message Heartbeat {
@@ -32,10 +52,11 @@ message Heartbeat {
   uint64 uptime_ms = 2;
 }
 
+// General-purpose config / firmware push (e.g. triggered by UPDATE_REQUIRED).
 message ConfigPush {
   string config_hash  = 1;
   string download_url = 2;
-  bytes  config_data  = 3;  // inline JSON config
+  bytes  config_data  = 3;  // inline payload (JSON port assignments or other config)
 }
 
 message Envelope {

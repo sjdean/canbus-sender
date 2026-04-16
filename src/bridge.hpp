@@ -1,19 +1,23 @@
 #pragma once
 
-#include "config.hpp"
-#include "dhcp.hpp"
-
-#include <map>
 #include <string>
 
-// Run the full CAN-bridge lifecycle:
-//  1. Registration loop (reconnects after failure).
-//  2. poll() loop forwarding CAN frames as UDP datagrams and sending TCP heartbeats.
+// Run the full CAN-bridge lifecycle.
 //
-// `primary_iface`  – network interface that holds the DHCP lease (e.g. "eth0").
-// `iface_map`      – bus-name → CAN interface mapping from the command line.
+// `primary_iface` — network interface that holds the DHCP lease (e.g. "eth0").
+//                   Also used to read the device MAC address.
 //
-// This function does not return under normal operation.
-// Returns non-zero on fatal error (e.g. REJECTED by HU).
-int run_bridge(const std::string& primary_iface,
-               const std::map<std::string, std::string>& iface_map);
+// Behaviour:
+//   - Enumerates physical CAN ports and reports them in DeviceAnnounce.
+//   - Loads any stored port assignments from disk.
+//   - If the HU is reachable: performs full registration, stores the received
+//     CanPortAssignment config, applies bitrates, and starts forwarding.
+//   - If the HU is unreachable BUT a stored config exists: starts forwarding
+//     with the last-known config (degraded mode) and retries registration in
+//     the background every 60 seconds.
+//   - If the HU is unreachable AND no stored config exists: waits and retries
+//     indefinitely until the HU responds (virgin device cannot operate alone).
+//
+// Does not return under normal operation.
+// Returns non-zero on a fatal, unrecoverable error (e.g. permanently REJECTED).
+int run_bridge(const std::string& primary_iface);
