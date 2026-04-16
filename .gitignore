@@ -1,0 +1,14 @@
+# Build directories
+build/
+cmake-build-*/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Generated protobuf-c files (produced by cmake --build)
+src/journeyos_device.pb-c.*
+
+# OS
+.DS_Store

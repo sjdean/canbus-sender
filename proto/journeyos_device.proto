@@ -1,0 +1,48 @@
+syntax = "proto3";
+package journeyos.device;
+
+enum DeviceType {
+  DEVICE_UNKNOWN = 0;
+  DEVICE_CANBUS  = 1;
+}
+
+message DeviceAnnounce {
+  uint32          protocol_version = 1;
+  DeviceType      type             = 2;
+  string          firmware_version = 3;
+  string          device_id        = 4;  // MAC address
+  repeated uint32 udp_ports        = 5;  // ports device intends to send on
+  string          config_hash      = 6;  // SHA-256 hex of current config file
+}
+
+message DeviceAck {
+  enum Status {
+    OK               = 0;
+    REJECTED         = 1;
+    UPDATE_REQUIRED  = 2;
+  }
+  Status status       = 1;
+  string firmware_url = 2;
+  string config_url   = 3;
+  uint32 assigned_id  = 4;
+}
+
+message Heartbeat {
+  string device_id = 1;
+  uint64 uptime_ms = 2;
+}
+
+message ConfigPush {
+  string config_hash  = 1;
+  string download_url = 2;
+  bytes  config_data  = 3;  // inline JSON config
+}
+
+message Envelope {
+  oneof payload {
+    DeviceAnnounce announce    = 1;
+    DeviceAck      ack         = 2;
+    Heartbeat      heartbeat   = 3;
+    ConfigPush     config_push = 4;
+  }
+}
