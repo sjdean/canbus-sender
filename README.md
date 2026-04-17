@@ -82,6 +82,30 @@ Each key is a logical bus name; the value is the **UDP destination port** on the
 
 ---
 
+## Design decisions
+
+### protobuf-c over native C++ protobuf
+
+The project uses [`protobuf-c`](https://github.com/protobuf-c/protobuf-c) (via `protoc-gen-c`) rather than the native C++ `libprotobuf` library.
+
+**Rationale:** `protobuf-c` is a deliberate choice for a constrained embedded target (Raspberry Pi):
+
+- Significantly smaller runtime library footprint
+- No C++ exceptions or RTTI dependency
+- Simpler generated code (plain C structs, no classes)
+
+**Consequence — `extern "C"` in C++ source files:** The project is written in C++ (`.cpp`), but `protobuf-c` generates plain C headers (`.pb-c.h`) that contain no `extern "C"` guards of their own. Without the guard, the C++ compiler applies name mangling to the protobuf symbols, causing linker failures. The `extern "C"` block around the include in each C++ translation unit that uses the generated header is therefore required:
+
+```cpp
+extern "C" {
+#include "journeyos_device.pb-c.h"
+}
+```
+
+**Alternative:** Switching to `protoc --cpp_out` would generate native C++ headers (no `extern "C"` needed) at the cost of pulling in the heavier `libprotobuf` dependency.
+
+---
+
 ## UDP datagram format
 
 Each CAN frame is encoded as a **20-byte ASCII string** (no terminator):
